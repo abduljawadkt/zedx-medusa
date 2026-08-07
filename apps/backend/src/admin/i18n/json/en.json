@@ -1,0 +1,9 @@
+{
+  "login": {
+    "title": "Welcome to ZEDX",
+    "hint": "Sign in to access the ZEDX admin area"
+  },
+  "invite": {
+    "title": "Welcome to ZEDX"
+  }
+}

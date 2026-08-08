@@ -69,9 +69,26 @@ function readCatalogArray<T>(source: string, exportName: string): T[] {
 }
 
 function loadZedxCatalog() {
-  const catalogPath = process.env.ZEDX_CATALOG_PATH
-    ? path.resolve(process.env.ZEDX_CATALOG_PATH)
-    : path.resolve(process.cwd(), "src/seed-data")
+  const catalogPathCandidates = [
+    process.env.ZEDX_CATALOG_PATH
+      ? path.resolve(process.env.ZEDX_CATALOG_PATH)
+      : undefined,
+    path.resolve(process.cwd(), "src/seed-data"),
+    path.resolve(process.cwd(), "apps/backend/src/seed-data"),
+    path.resolve(process.cwd(), ".medusa/server/src/seed-data"),
+  ].filter(Boolean) as string[]
+
+  const catalogPath = catalogPathCandidates.find(
+    (candidate) =>
+      fs.existsSync(path.join(candidate, "products.ts")) &&
+      fs.existsSync(path.join(candidate, "categories.ts"))
+  )
+
+  if (!catalogPath) {
+    throw new Error(
+      `Unable to find bundled ZedX catalog seed data. Checked: ${catalogPathCandidates.join(", ")}`
+    )
+  }
 
   const productSource = fs.readFileSync(
     path.join(catalogPath, "products.ts"),

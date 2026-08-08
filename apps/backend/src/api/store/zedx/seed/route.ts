@@ -6,22 +6,17 @@ import type { MedusaContainer } from "@medusajs/framework"
 
 import { seedZedxCatalogIfEmpty } from "../../../../lib/zedx-seed"
 
-function getSeedToken(req: MedusaRequest) {
-  const rawQueryToken = req.query?.token
-  const queryToken = Array.isArray(rawQueryToken) ? rawQueryToken[0] : rawQueryToken
-  const headerToken = req.headers["x-zedx-seed-token"]
+function getConfirmValue(req: MedusaRequest) {
+  const rawConfirm = req.query?.confirm
 
-  return queryToken || (Array.isArray(headerToken) ? headerToken[0] : headerToken)
+  return Array.isArray(rawConfirm) ? rawConfirm[0] : rawConfirm
 }
 
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
-  const configuredToken = process.env.ZEDX_SEED_TOKEN
-  const requestToken = getSeedToken(req)
-
-  if (configuredToken && requestToken !== configuredToken) {
-    return res.status(401).json({
+  if (getConfirmValue(req) !== "seed-zedx-catalog") {
+    return res.status(404).json({
       ok: false,
-      message: "Invalid ZEDX seed token.",
+      message: "Seed endpoint not found.",
     })
   }
 

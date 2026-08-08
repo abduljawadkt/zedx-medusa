@@ -69,15 +69,16 @@ function readCatalogArray<T>(source: string, exportName: string): T[] {
 }
 
 function loadZedxCatalog() {
-  const frontendPath =
-    process.env.ZEDX_FRONTEND_PATH ||
-    path.resolve(process.cwd(), "../../../zedx")
+  const catalogPath = process.env.ZEDX_CATALOG_PATH
+    ? path.resolve(process.env.ZEDX_CATALOG_PATH)
+    : path.resolve(process.cwd(), "src/seed-data")
+
   const productSource = fs.readFileSync(
-    path.join(frontendPath, "src/data/products.ts"),
+    path.join(catalogPath, "products.ts"),
     "utf8"
   )
   const categorySource = fs.readFileSync(
-    path.join(frontendPath, "src/data/categories.ts"),
+    path.join(catalogPath, "categories.ts"),
     "utf8"
   )
 

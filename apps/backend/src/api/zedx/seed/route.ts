@@ -4,7 +4,7 @@ import type {
 } from "@medusajs/framework/http"
 import type { MedusaContainer } from "@medusajs/framework"
 
-import { seedZedxCatalogIfEmpty } from "../../../../lib/zedx-seed"
+import { seedZedxCatalogIfEmpty } from "../../../lib/zedx-seed"
 
 function getConfirmValue(req: MedusaRequest) {
   const rawConfirm = req.query?.confirm

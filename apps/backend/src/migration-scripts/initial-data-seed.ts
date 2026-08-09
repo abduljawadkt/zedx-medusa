@@ -51,7 +51,7 @@ type ZedxProduct = {
   highlights: string[]
 }
 
-function slugify(value: string) {
+export function slugify(value: string) {
   return value
     .toLowerCase()
     .replace(/&/g, "and")
@@ -68,7 +68,7 @@ function readCatalogArray<T>(source: string, exportName: string): T[] {
   return JSON.parse(match[1]) as T[]
 }
 
-function loadZedxCatalog() {
+export function loadZedxCatalog() {
   const catalogPathCandidates = [
     process.env.ZEDX_CATALOG_PATH
       ? path.resolve(process.env.ZEDX_CATALOG_PATH)
@@ -106,7 +106,7 @@ function loadZedxCatalog() {
   return { categories, collections, products }
 }
 
-function storefrontAssetUrl(assetPath: string) {
+export function storefrontAssetUrl(assetPath: string) {
   if (assetPath.startsWith("http://") || assetPath.startsWith("https://")) {
     return assetPath
   }
@@ -115,7 +115,7 @@ function storefrontAssetUrl(assetPath: string) {
   return `${baseUrl.replace(/\/+$/, "")}${assetPath}`
 }
 
-function skuFromSlug(slug: string) {
+export function skuFromSlug(slug: string) {
   return slug.toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "")
 }
 

@@ -4,7 +4,10 @@ import type {
 } from "@medusajs/framework/http"
 import type { MedusaContainer } from "@medusajs/framework"
 
-import { seedZedxCatalogIfEmpty } from "../../../lib/zedx-seed"
+import {
+  seedZedxCatalogIfEmpty,
+  serializeSeedError,
+} from "../../../lib/zedx-seed"
 
 function getConfirmValue(req: MedusaRequest) {
   const rawConfirm = req.query?.confirm
@@ -20,15 +23,22 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     })
   }
 
-  const result = await seedZedxCatalogIfEmpty(
-    req.scope as unknown as MedusaContainer
-  )
+  try {
+    const result = await seedZedxCatalogIfEmpty(
+      req.scope as unknown as MedusaContainer
+    )
 
-  return res.status(200).json({
-    ok: true,
-    seeded: result.seeded,
-    before_count: result.beforeCount,
-    after_count: result.afterCount,
-    message: result.message,
-  })
+    return res.status(200).json({
+      ok: true,
+      seeded: result.seeded,
+      before_count: result.beforeCount,
+      after_count: result.afterCount,
+      message: result.message,
+    })
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      error: serializeSeedError(error),
+    })
+  }
 }

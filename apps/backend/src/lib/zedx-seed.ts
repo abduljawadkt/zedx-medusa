@@ -11,11 +11,12 @@ import {
 } from "@medusajs/medusa/core-flows"
 
 import {
-  loadZedxCatalog,
   skuFromSlug,
   slugify,
   storefrontAssetUrl,
 } from "../migration-scripts/initial-data-seed"
+import { categories as zedxCategories } from "../seed-data/categories"
+import { products as zedxProducts } from "../seed-data/products"
 
 export async function getZedxProductCount(container: MedusaContainer) {
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
@@ -40,7 +41,9 @@ export async function seedZedxCatalogIfEmpty(container: MedusaContainer) {
     }
   }
 
-  const { categories, collections, products } = loadZedxCatalog()
+  const categories = zedxCategories
+  const products = zedxProducts
+  const collections = Array.from(new Set(products.map((product) => product.collection)))
 
   const { data: shippingProfiles } = await query.graph({
     entity: "shipping_profile",

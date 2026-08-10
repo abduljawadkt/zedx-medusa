@@ -3,6 +3,7 @@ import type {
   MedusaResponse,
 } from "@medusajs/framework/http"
 import type { MedusaContainer } from "@medusajs/framework"
+import { seedZedxCatalogIfEmpty } from "../../../lib/zedx-seed"
 
 function getConfirmValue(req: MedusaRequest) {
   const rawConfirm = req.query?.confirm
@@ -33,7 +34,6 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   }
 
   try {
-    const { seedZedxCatalogIfEmpty } = await import("../../../lib/zedx-seed")
     const result = await seedZedxCatalogIfEmpty(
       req.scope as unknown as MedusaContainer
     )

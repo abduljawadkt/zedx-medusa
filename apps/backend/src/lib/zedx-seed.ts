@@ -56,11 +56,11 @@ export async function seedZedxCatalogIfEmpty(container: MedusaContainer) {
     entity: "sales_channel",
     fields: ["id", "name"],
   })
-  let salesChannel = salesChannels.find((channel) =>
+  let salesChannelId = (salesChannels.find((channel) =>
     String(channel.name).toLowerCase().includes("zedx")
-  ) || salesChannels[0]
+  ) || salesChannels[0])?.id
 
-  if (!salesChannel) {
+  if (!salesChannelId) {
     const {
       result: [createdSalesChannel],
     } = await createSalesChannelsWorkflow(container).run({
@@ -73,7 +73,7 @@ export async function seedZedxCatalogIfEmpty(container: MedusaContainer) {
         ],
       },
     })
-    salesChannel = createdSalesChannel
+    salesChannelId = createdSalesChannel.id
   }
 
   const { data: existingCategories } = await query.graph({
@@ -199,7 +199,7 @@ export async function seedZedxCatalogIfEmpty(container: MedusaContainer) {
             ],
             sales_channels: [
               {
-                id: salesChannel.id,
+                id: salesChannelId,
               },
             ],
             metadata: {

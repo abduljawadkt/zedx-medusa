@@ -8,15 +8,18 @@ import {
   createProductCategoriesWorkflow,
   createProductsWorkflow,
   createSalesChannelsWorkflow,
+  updateProductsWorkflow,
 } from "@medusajs/medusa/core-flows"
 
 import {
   skuFromSlug,
   slugify,
-  storefrontAssetUrl,
 } from "../migration-scripts/initial-data-seed"
 import { categories as zedxCategories } from "../seed-data/categories"
 import { products as zedxProducts } from "../seed-data/products"
+
+const DEFAULT_PUBLIC_ASSET_BASE_URL =
+  "https://raw.githubusercontent.com/abduljawadkt/zedx/main/public"
 
 export async function getZedxProductCount(container: MedusaContainer) {
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
@@ -28,16 +31,104 @@ export async function getZedxProductCount(container: MedusaContainer) {
   return data.length
 }
 
+function publicAssetUrl(assetPath: string) {
+  if (assetPath.startsWith("http://") || assetPath.startsWith("https://")) {
+    return assetPath
+  }
+
+  const baseUrl =
+    process.env.ZEDX_PUBLIC_ASSET_URL ||
+    process.env.ZEDX_STOREFRONT_ASSET_URL ||
+    DEFAULT_PUBLIC_ASSET_BASE_URL
+
+  const encodedPath = assetPath
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/")
+
+  return `${baseUrl.replace(/\/+$/, "")}${encodedPath.startsWith("/") ? encodedPath : `/${encodedPath}`}`
+}
+
+export async function repairZedxProductImages(container: MedusaContainer) {
+  const query = container.resolve(ContainerRegistrationKeys.QUERY)
+  const { data: existingProducts } = await query.graph({
+    entity: "product",
+    fields: ["id", "handle", "thumbnail"],
+  })
+
+  const productByHandle = new Map(
+    zedxProducts.map((product) => [product.slug, product])
+  )
+  const updates = existingProducts
+    .map((existingProduct) => {
+      const sourceProduct = productByHandle.get(existingProduct.handle)
+
+      if (!sourceProduct) {
+        return undefined
+      }
+
+      const gallery = sourceProduct.gallery?.length
+        ? sourceProduct.gallery
+        : [sourceProduct.image]
+      const thumbnail = publicAssetUrl(sourceProduct.image)
+
+      return {
+        selector: {
+          id: existingProduct.id,
+        },
+        update: {
+          thumbnail,
+          images: gallery.map((image) => ({
+            url: publicAssetUrl(image),
+          })),
+          metadata: {
+            ...sourceProduct,
+            image_base_url:
+              process.env.ZEDX_PUBLIC_ASSET_URL ||
+              process.env.ZEDX_STOREFRONT_ASSET_URL ||
+              DEFAULT_PUBLIC_ASSET_BASE_URL,
+            repaired_image_urls_at: new Date().toISOString(),
+          },
+        },
+      }
+    })
+    .filter(Boolean) as {
+    selector: { id: string }
+    update: {
+      thumbnail: string
+      images: { url: string }[]
+      metadata: Record<string, unknown>
+    }
+  }[]
+
+  for (const update of updates) {
+    await updateProductsWorkflow(container).run({
+      input: update,
+    })
+  }
+
+  return {
+    repairedCount: updates.length,
+    assetBaseUrl:
+      process.env.ZEDX_PUBLIC_ASSET_URL ||
+      process.env.ZEDX_STOREFRONT_ASSET_URL ||
+      DEFAULT_PUBLIC_ASSET_BASE_URL,
+  }
+}
+
 export async function seedZedxCatalogIfEmpty(container: MedusaContainer) {
   const query = container.resolve(ContainerRegistrationKeys.QUERY)
   const beforeCount = await getZedxProductCount(container)
 
   if (beforeCount > 0) {
+    const imageRepair = await repairZedxProductImages(container)
+
     return {
       seeded: false,
       beforeCount,
       afterCount: beforeCount,
-      message: "Products already exist. ZEDX seed was skipped.",
+      imageRepair,
+      message: "Products already exist. ZEDX seed was skipped and image URLs were repaired.",
     }
   }
 
@@ -167,9 +258,9 @@ export async function seedZedxCatalogIfEmpty(container: MedusaContainer) {
             handle: product.slug,
             status: ProductStatus.PUBLISHED,
             shipping_profile_id: shippingProfile.id,
-            thumbnail: storefrontAssetUrl(product.image),
+            thumbnail: publicAssetUrl(product.image),
             images: gallery.map((image) => ({
-              url: storefrontAssetUrl(image),
+              url: publicAssetUrl(image),
             })),
             category_ids: categoryId ? [categoryId] : [],
             collection_id: collectionId,
@@ -226,11 +317,13 @@ export async function seedZedxCatalogIfEmpty(container: MedusaContainer) {
   }
 
   const afterCount = await getZedxProductCount(container)
+  const imageRepair = await repairZedxProductImages(container)
 
   return {
     seeded: missingProducts.length > 0,
     beforeCount,
     afterCount,
+    imageRepair,
     message: `Seeded ${afterCount - beforeCount} ZEDX products.`,
   }
 }

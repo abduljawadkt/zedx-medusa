@@ -60,12 +60,28 @@ export function slugify(value: string) {
 }
 
 function readCatalogArray<T>(source: string, exportName: string): T[] {
-  const match = source.match(new RegExp(`export const ${exportName} = ([\\s\\S]*?\\n]) satisfies`))
+  const match =
+    source.match(new RegExp(`export const ${exportName} = ([\\s\\S]*?\\n]) satisfies`)) ||
+    source.match(new RegExp(`exports\\.${exportName}\\s*=\\s*([\\s\\S]*?\\n\\]);`))
+
   if (!match) {
     throw new Error(`Unable to read ${exportName} from ZedX frontend catalog.`)
   }
 
   return JSON.parse(match[1]) as T[]
+}
+
+function catalogFilePath(catalogPath: string, fileName: string) {
+  const tsFile = path.join(catalogPath, `${fileName}.ts`)
+  const jsFile = path.join(catalogPath, `${fileName}.js`)
+
+  if (fs.existsSync(tsFile)) {
+    return tsFile
+  }
+
+  if (fs.existsSync(jsFile)) {
+    return jsFile
+  }
 }
 
 export function loadZedxCatalog() {
@@ -80,8 +96,8 @@ export function loadZedxCatalog() {
 
   const catalogPath = catalogPathCandidates.find(
     (candidate) =>
-      fs.existsSync(path.join(candidate, "products.ts")) &&
-      fs.existsSync(path.join(candidate, "categories.ts"))
+      catalogFilePath(candidate, "products") &&
+      catalogFilePath(candidate, "categories")
   )
 
   if (!catalogPath) {
@@ -91,11 +107,11 @@ export function loadZedxCatalog() {
   }
 
   const productSource = fs.readFileSync(
-    path.join(catalogPath, "products.ts"),
+    catalogFilePath(catalogPath, "products")!,
     "utf8"
   )
   const categorySource = fs.readFileSync(
-    path.join(catalogPath, "categories.ts"),
+    catalogFilePath(catalogPath, "categories")!,
     "utf8"
   )
 
